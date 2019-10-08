@@ -4,6 +4,7 @@
 
 #include "flutter/shell/platform/embedder/tests/embedder_test_context.h"
 
+#include "flutter/fml/paths.h"
 #include "flutter/runtime/dart_vm.h"
 #include "flutter/shell/platform/embedder/tests/embedder_assertions.h"
 #include "third_party/dart/runtime/bin/elf_loader.h"
@@ -20,7 +21,7 @@ EmbedderTestContext::EmbedderTestContext(std::string assets_path)
 
   if (flutter::DartVM::IsRunningPrecompiledCode()) {
     std::string filename(assets_path_);
-    filename += "/app_elf_snapshot.so";
+    filename = fml::paths::JoinPaths({filename, "app_elf_snapshot.so"});
 
     const uint8_t *vm_snapshot_data = nullptr,
                   *vm_snapshot_instructions = nullptr,
@@ -32,17 +33,15 @@ EmbedderTestContext::EmbedderTestContext(std::string assets_path)
         filename.c_str(), &error, &vm_snapshot_data, &vm_snapshot_instructions,
         &isolate_snapshot_data, &isolate_snapshot_instructions);
 
-    if (elf_library_handle_ != nullptr) {
-      vm_snapshot_data_.reset(new fml::NonOwnedMapping(vm_snapshot_data, 0));
-      vm_snapshot_instructions_.reset(
-          new fml::NonOwnedMapping(vm_snapshot_instructions, 0));
-      isolate_snapshot_data_.reset(
-          new fml::NonOwnedMapping(isolate_snapshot_data, 0));
-      isolate_snapshot_instructions_.reset(
-          new fml::NonOwnedMapping(isolate_snapshot_instructions, 0));
-    } else {
-      FML_LOG(WARNING) << "Could not load snapshot: " << error;
-    }
+    FML_CHECK(elf_library_handle_ != nullptr);
+
+    vm_snapshot_data_.reset(new fml::NonOwnedMapping(vm_snapshot_data, 0));
+    vm_snapshot_instructions_.reset(
+        new fml::NonOwnedMapping(vm_snapshot_instructions, 0));
+    isolate_snapshot_data_.reset(
+        new fml::NonOwnedMapping(isolate_snapshot_data, 0));
+    isolate_snapshot_instructions_.reset(
+        new fml::NonOwnedMapping(isolate_snapshot_instructions, 0));
   }
 
   isolate_create_callbacks_.push_back(
